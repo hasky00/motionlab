@@ -1,0 +1,35 @@
+name: Render Bitcoin Preview
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Render GIF
+        run: python motionlab.py --output out/bitcoin.gif
+      - name: Verify animation and Bitcoin artwork
+        run: |
+          python - <<'PY'
+          from PIL import Image, ImageChops
+          im = Image.open("out/bitcoin.gif")
+          assert im.n_frames >= 24, im.n_frames
+          im.seek(0)
+          a = im.convert("RGB")
+          im.seek(12)
+          b = im.convert("RGB")
+          assert ImageChops.difference(a,b).getbbox(), "Frames are identical"
+          print("Verified", im.n_frames, "animated frames")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: motionlab-bitcoin-gif
+          path: out/bitcoin.gif
